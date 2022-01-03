@@ -1,0 +1,256 @@
+﻿
+@{
+    ViewData["Title"] = "List";
+}
+@model List<WebSitePassword>
+<h1>List</h1>
+
+<div>
+    <input class="form-control" onkeyup="Filter(event.target.value)" placeholder="Tabloda Arayınız..."/>
+</div>
+<br />
+
+<div class="dropdown show" >
+    <a class="btn btn-secondary dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Sıralama
+    </a>
+    <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+        <a class="dropdown-item" href="/WebSitePassword/List?orderBy=asc">Kopyalama Sayısına Göre Artan</a>
+        <a class="dropdown-item" href="/WebSitePassword/List?orderBy=desc">Kopyalama Sayısına Göre Azalan</a>
+    </div>
+</div>
+<br />
+<table class="table table-bordered" id="userWebSitePasswordTable">
+    <tr>
+        <th>Copy Count</th>
+        <th>WebSite</th>
+        <th>UserName</th>
+        <th>Password</th>
+        <th>Actions</th>
+    </tr>
+    @foreach (var item in Model)
+    {
+        <tr id="removeItem_@item.Id">
+            <td>
+                <span>@item.CopyCount kez kopyalandı.</span>
+            </td>
+            <td>
+                <a href="@item.WebSiteUrl" target="_blank">
+                    @item.WebSite
+                </a>
+            </td>
+            <td>
+                <div class="input-group">
+                    <input class="form-control" id="usernameText_@item.Id" value="@item.UserName"/>
+                    <span class="input-group-append">
+                        <button title="Değiştir" onclick="ChangeUserName('@item.Id')" class="btn btn-info"><i class="fa fa-edit"></i></button>&nbsp;
+                        <button title="Kopyala" onclick="UserCopy('@item.Id')" class="btn btn-warning"><i class="fa fa-copy"></i></button>
+                    </span>
+                </div>
+            </td>
+            <td>
+                <div class="input-group">
+                    <input class="form-control" readonly id="passwordText_@item.Id" value="@item.Password" />
+                    <span>
+                        <button title="Kopyala" onclick="PasswordCopy('@item.Id')" class="btn btn-warning"><i class="fa fa-copy"></i></button>
+                    </span>
+                </div>
+            </td>
+            <td>
+                <button title="Parola Geçmişi" data-toggle="modal" data-target="#passwordHistoryModal_@item.Id" class="btn btn-primary"><i class="fa fa-history" aria-hidden="true"></i></button>
+
+                <button title="Parola Oluştur" onclick="GenerateNewPassword('@item.Id')" class="btn btn-primary"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
+
+                <button title="Kaydı Sil" onclick="Remove('@item.Id')" class="btn btn-danger"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>
+            </td>
+
+        </tr>
+    }
+</table>
+
+
+@foreach (var item in Model)
+{
+    <div id="passwordHistoryModal_@item.Id" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Password History</h4>
+                </div>
+                <div class="modal-body">
+                    <ul class="list-group">
+                        @foreach (var historyItem in item.PasswordHistories.OrderByDescending(x=>x.ExpiredDate))
+                        {
+                            <li class="list-group-item">
+                                <span>Eski Parola: <b>@historyItem.Password</b></span>&nbsp;&nbsp;
+                                <span>Parola Değiştirme Tarihi:</span>&nbsp;&nbsp;
+                                <span data-toggle="tooltip" title="Expire Data">
+                                    @historyItem.ExpiredDate.ToShortDateString()
+                                    @historyItem.ExpiredDate.ToShortTimeString()
+                                    <i class="fa fa-info-circle"></i>
+                                </span>
+
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts{
+
+<script>
+    PasswordCopy = (id) => {
+        var copyText = document.getElementById("passwordText_" + id);
+        copyText.select();
+        document.execCommand("copy");
+        IncreaseCopyCount(id);
+        alert("Kopyalanan Text:" + copyText.value);
+    }
+
+    
+
+    IncreaseCopyCount = (id) => {
+        $.ajax({
+            url: '/WebSitePassword/IncreaseCopyCount/' + id,
+            type: 'POST',
+            data: JSON.stringify(id),
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (response) {
+                window.location.href="/WebSitePassword/List"
+            },
+            error: (err) => {
+                console.log('err', err);
+            }
+        })
+    }
+
+    UserCopy = (id) => {
+        var copyText = document.getElementById("usernametext_" + id);
+        copyText.select();
+        document.execCommand("copy");
+        IncreaseCopyCount(id);
+        alert("Kopyalanan Text:" + copyText.value);
+    }
+
+    GenerateNewPassword = (id) => {
+        $.ajax({
+            url: '/WebSitePassword/SaveNewPassword',
+            type: 'POST',
+            data: JSON.stringify(id),
+            contentType: 'application/json;charset=utf-8',
+            dataType: 'json',
+            success: function (response) {
+                alert('Parolanız Güncellendi');
+                $('#passwordText_' + id).val(response);
+                window.location.href = '/WebSitePassword/List';
+
+            },
+            error: (err) => {
+                console.log('err', err);
+            }
+        })
+    }
+
+    Remove = (id) => {
+
+
+
+        var confirmResult = confirm(` İşleme devam etmek istediğinize emin misiniz ?`);
+
+        if (confirmResult) {
+
+            $.ajax({
+                url: '/WebSitePassword/Remove/',
+                type: 'POST',
+                data: JSON.stringify(id),
+                contentType: 'application/json;charset=utf-8',
+                dataType: 'json',
+                success: function (response) {
+                    alert('Kayıt Silindi');
+                    $('#removeItem_' + id).fadeOut();
+                },
+                error: (err) => {
+                    console.log('err', err);
+                }
+            })
+        }
+        
+    }
+
+    ChangeUserName = (id) => {
+
+        var confirmResult = confirm("UserName Güncellemek İstediğiniziden Emin Misiniz ?");
+
+        var data = {
+            Id: id,
+            userName: $('#usernameText_' + id).val()
+        }
+
+        if (confirmResult)
+        {
+            $.ajax({
+                url: '/WebSitePassword/ChangeUserName',
+                type: 'POST',
+                data: JSON.stringify(data),
+                contentType: 'application/json;charset=utf-8',
+                dataType: 'json',
+                success: function (response) {
+                    alert(response);
+                    console.log
+                },
+                error: (err) => {
+                    console.log('err', err);
+                }
+            })
+        }
+    }
+
+    Filter = (filterText) => {
+
+        var filter, table, tr;
+
+        filter = filterText.toUpperCase();
+        table = document.getElementById("userWebSitePasswordTable");
+        tr = table.getElementsByTagName("tr");
+
+        for (var i = 0; i < tr.length; i++) {
+
+            var tdWebSite = tr[i].getElementsByTagName("td")[1];
+            var tdUserName = tr[i].getElementsByTagName("td")[2];
+            var tdPassword = tr[i].getElementsByTagName("td")[3];
+
+            if (tdWebSite || tdUserName || tdPassword) {
+
+                WebSiteElement = tdWebSite.getElementsByTagName("a")[0];
+                UserNameElement = tdUserName.getElementsByTagName("input")[0];
+                PasswordElement = tdPassword.getElementsByTagName("input")[0];
+
+                if (WebSiteElement || UserNameElement || PasswordElement) {
+
+                    var WebSiteValue = WebSiteElement.textContent || WebSiteElement.innerText;
+                    var UserNameValue = UserNameElement.value;
+                    var PasswordValue = PasswordElement.value;
+
+                    if (WebSiteValue.toUpperCase().indexOf(filter) > -1 ||
+                        PasswordValue.toUpperCase().indexOf(filter) > -1 ||
+                        UserNameValue.toUpperCase().indexOf(filter) > -1 )
+                    {
+
+                        tr[i].style.display = ""; //eşlenen değer.
+
+                    }
+                    else {
+                        tr[i].style.display = "none"; // eşleşmeyen değer.
+                    }
+
+                }
+            }
+        }
+    }
+
+</script>
+ }

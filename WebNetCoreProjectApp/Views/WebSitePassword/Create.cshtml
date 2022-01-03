@@ -1,0 +1,174 @@
+﻿
+@{
+    ViewData["Title"] = "Create";
+}
+@model WebSitePassword
+
+
+<h1>Create</h1>
+
+<form id="PasswordGeneratorForm" method="post">
+
+    <div class="form-group">
+        <label>PasswordCharLength</label>
+        <input class="form-control" type="number" value="12" name="PasswordLength" />
+    </div>
+
+    <div class="form-group">
+        <label>NumericCharLength</label>
+        <input class="form-control" type="number" value="3" name="NumericCharLength" />
+    </div>
+
+    <div class="form-group">
+        <label>LowerCaseCharLength</label>
+        <input class="form-control" type="number" value="3" name="LowerCaseCharLength" />
+    </div>
+
+    <div class="form-group">
+        <label>UpperCaseCharLength</label>
+        <input class="form-control" type="number" value="3" name="UpperCaseCharLength" />
+    </div>
+
+    <div class="form-group">
+        <label>SpecialCharLength</label>
+        <input class="form-control" type="number" value="3" name="SpecialCharLength" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Generate Password</button>
+    
+</form>
+
+<div class="text-info">
+    @ViewBag.Message
+</div>
+
+<form method="post">
+    <div class="form-group">
+        <label for="psw">Şifre:</label>
+        <div class="input-group">
+
+            <div class="input-group-append">
+                <button onclick="ShowPassword(event)" class="btn btn-warning"><i class="fa fa-eye"></i></button>
+            </div>
+            <input readonly type="password" asp-for="Password" class="form-control" id="passwordInput" />
+
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="usm">UserName:</label>
+        <input type="text" class="form-control" asp-for="UserName" />
+    </div>
+
+    <div class="form-group">
+        <label for="ws">WebSite:</label>
+        <input type="text" class="form-control" asp-for="WebSite" />
+    </div>
+
+    <div class="form-group">
+        <label for="wsu">WebSiteUrl:</label>
+        <input type="text" class="form-control" asp-for="WebSiteUrl" />
+    </div>
+    <button type="submit"class="btn btn-info">Kaydet</button>
+</form>
+
+@section Scripts{
+
+<script>
+
+    $.fn.serializeObject = function () {
+        var o = {};
+        var a = this.serializeArray();
+        $.each(a, function () {
+            if (o[this.name]) {
+                if (!o[this.name].push) {
+                    o[this.name] = [o[this.name]];
+                }
+                o[this.name].push(this.value || '');
+            } else {
+                o[this.name] = this.value || '';
+            }
+        });
+        return o;
+    };
+
+    $('#PasswordGeneratorForm').on('submit', (event) => {
+
+        event.preventDefault();
+
+        var formData = $('#PasswordGeneratorForm').serializeObject();
+
+        var validationMessage = PasswordSecurityValidation(formData);
+
+        var messageboxResult = confirm(`${validationMessage}. İşleme devam etmek istediğinize emin misiniz ?`);
+
+        if (messageboxResult) {
+
+            $.ajax({
+                url: '/WebSitePassword/GeneratePassword',
+                type: 'POST',
+                data: formData,
+                success: (response) => {
+                    $('#passwordInput').val(response);
+                }
+            })
+
+        }
+
+        
+
+    })
+
+    PasswordSecurityValidation = (formData) => {
+
+        var message = "";
+
+        var combinationCount = 0;
+
+        if (formData.LowerCaseCharLength > 0) {
+            combinationCount++;
+        }
+
+        if (formData.UpperCaseCharLength > 0) {
+            combinationCount++;
+        }
+
+        if (formData.NumericCharLength > 0) {
+            combinationCount++;
+        }
+
+        if (formData.SpecialCharLength > 0) {
+            combinationCount++;
+        }
+
+        if ((combinationCount == 4 || combinationCount == 3) && formData.PasswordLength >= 12) {
+
+            message = "Güçlü Bir Parola Seçtiniz"
+        } else if ((combinationCount == 3 || combinationCount == 4 || combinationCount == 2) && formData.PasswordLength >= 8) {
+            message = "Orta Seviye Bir Parola Seçtiniz";
+        } else if ((combinationCount < 2 || formData.PasswordLength < 8)) {
+            message = "Zayıf Bir Parola Seçtiniz.Min 8 karakter ve en az 1 büyük 1 küçük ve 1 numeric değer giriniz";
+        }
+
+        return message;
+    }
+
+    ShowPassword = () => {
+
+        event.preventDefault();
+
+        var type = $('#passwordInput').attr('type');
+
+        if (type == 'password') {
+
+            $('#passwordInput').prop('type', 'text');
+        } else {
+
+            $('#passwordInput').prop('type', 'password');
+        }
+    }
+
+
+
+</script>
+
+}
